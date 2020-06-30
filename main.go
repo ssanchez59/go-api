@@ -27,6 +27,15 @@ type ServerInfo struct {
 	Is_down            bool
 }
 
+type LabsResponse struct {
+	Endpoints []Endpoint
+}
+
+type Endpoint struct {
+	IpAddress string
+	Grade     string
+}
+
 func Index(ctx *fasthttp.RequestCtx) {
 	fmt.Fprint(ctx, "Welcome!\n")
 }
@@ -53,9 +62,14 @@ func Hello(ctx *fasthttp.RequestCtx) {
 	body, _ := ioutil.ReadAll(resp.Body)
 	fmt.Println("response Body:", string(body))
 
+	var labsResponse LabsResponse
+	json.Unmarshal([]byte(body), &labsResponse)
+	// fmt.Printf("Enpoints: %s", labsResponse.Endpoints[1].IpAddress)
+
 	var servers []Server
-	servers = append(servers, Server{"34.193.204.92", "A"})
-	servers = append(servers, Server{"34.193.69.252", "A"})
+	for _, endpoint := range labsResponse.Endpoints {
+		servers = append(servers, Server{endpoint.IpAddress, endpoint.Grade})
+	}
 
 	var serverInfo ServerInfo
 	serverInfo.Servers = servers
