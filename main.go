@@ -24,6 +24,7 @@ type Server struct {
 }
 
 type ServerInfo struct {
+	Name               string
 	Servers            []Server
 	Servers_changed    bool
 	Ssl_grade          string
@@ -90,7 +91,7 @@ func Search(ctx *fasthttp.RequestCtx) {
 
 	// Create the "servers" table.
 	if _, err := db.Exec(
-		"CREATE TABLE IF NOT EXISTS servers (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), domain_id UUID REFERENCES domains(id) ON DELETE CASCADE,ssl_grade string, country string, owner string)"); err != nil {
+		"CREATE TABLE IF NOT EXISTS servers (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), domain_id UUID REFERENCES domains(id) ON DELETE CASCADE, address string, ssl_grade string, country string, owner string)"); err != nil {
 		log.Fatal(err)
 	}
 
@@ -117,19 +118,18 @@ func Search(ctx *fasthttp.RequestCtx) {
 	json.Unmarshal([]byte(body), &labsResponse)
 	// fmt.Printf("Enpoints: %s", labsResponse.Endpoints[1].IpAddress)
 
-	var servers []Server
-	for _, endpoint := range labsResponse.Endpoints {
-		servers = append(servers, Server{endpoint.IpAddress, endpoint.Grade})
-	}
+	// var servers []Server
+	// for _, endpoint := range labsResponse.Endpoints {
+	// 	servers = append(servers, Server{endpoint.IpAddress, endpoint.Grade})
+	// }
 
-	var serverInfo ServerInfo
-	serverInfo.Servers = servers
-	jsonInfo, _ := json.Marshal(serverInfo)
-	fmt.Fprintf(ctx, "%s\n", jsonInfo)
+	// var serverInfo ServerInfo
+	// serverInfo.Servers = servers
+	// jsonInfo, _ := json.Marshal(serverInfo)
+	// fmt.Fprintf(ctx, "%s\n", jsonInfo)
 
 	// Get id if domain already exists
 	sel := "SELECT id FROM domains WHERE domain= $1"
-
 	var idn string
 	err = db.QueryRow(sel, domain).Scan(&idn)
 	if err != nil && err != sql.ErrNoRows {
@@ -138,14 +138,34 @@ func Search(ctx *fasthttp.RequestCtx) {
 
 	if len(idn) > 0 {
 		fmt.Printf("found idn: %v\n", idn)
+		// Insert servers into the "servers" table.
+		for _, endpoint := range labsResponse.Endpoints {
+			if _, err := db.Exec("INSERT INTO servers (domain_id, address, ssl_grade) VALUES ($1, $2, $3)", idn, endpoint.IpAddress, endpoint.Grade); err != nil {
+				log.Fatal(err)
+			}
+		}
 	} else {
-		fmt.Printf("created idn: %v\n", idn)
 		// Insert domain into the "domains" table.
 		tblname := "domains"
 		quoted := pq.QuoteIdentifier(tblname)
-		if _, err := db.Exec(
-			fmt.Sprintf("INSERT INTO %s (domain) VALUES ($1)", quoted), domain); err != nil {
+		fmt.Printf("quoted: %v\n", quoted)
+		if _, err := db.Exec("INSERT INTO domains (domain) VALUES ($1)", domain); err != nil {
 			log.Fatal(err)
+		}
+
+		// Get id if domain already exists
+		sel := "SELECT id FROM domains WHERE domain= $1"
+		err = db.QueryRow(sel, domain).Scan(&idn)
+		if err != nil && err != sql.ErrNoRows {
+			log.Fatal(err)
+		}
+		fmt.Printf("created idn: %v\n", idn)
+
+		// Insert servers into the "servers" table.
+		for _, endpoint := range labsResponse.Endpoints {
+			if _, err := db.Exec("INSERT INTO servers (domain_id, address, ssl_grade) VALUES ($1, $2, $3)", idn, endpoint.IpAddress, endpoint.Grade); err != nil {
+				log.Fatal(err)
+			}
 		}
 	}
 }
