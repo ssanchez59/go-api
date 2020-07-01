@@ -99,7 +99,7 @@ func Search(ctx *fasthttp.RequestCtx) {
 
 	// Get info from SSL Labs
 	url := "https://api.ssllabs.com/api/v3/analyze?host=" + domain
-	fmt.Println("URL:>", url)
+	// fmt.Println("URL:>", url)
 
 	var jsonStr = []byte(`{"title":"Buy cheese and bread for breakfast."}`)
 	req, err := http.NewRequest("GET", url, bytes.NewBuffer(jsonStr))
@@ -114,7 +114,7 @@ func Search(ctx *fasthttp.RequestCtx) {
 	// fmt.Println("response Status:", resp.Status)
 	// fmt.Println("response Headers:", resp.Header)
 	body, _ := ioutil.ReadAll(resp.Body)
-	fmt.Println("response Body:", string(body))
+	// fmt.Println("response Body:", string(body))
 
 	var labsResponse LabsResponse
 	json.Unmarshal([]byte(body), &labsResponse)
@@ -207,9 +207,11 @@ func Search(ctx *fasthttp.RequestCtx) {
 
 		// Insert servers into the "servers" table.
 		for _, endpoint := range labsResponse.Endpoints {
+
 			if _, err := db.Exec("INSERT INTO servers (domain_id, address, ssl_grade, country, owner) VALUES ($1, $2, $3, $4, $5)", idn, endpoint.IpAddress, endpoint.Grade, "Colombia", "Sebas"); err != nil {
 				log.Fatal(err)
 			}
+
 		}
 
 		// Return the domain info.
