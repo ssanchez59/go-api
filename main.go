@@ -142,8 +142,20 @@ func Search(ctx *fasthttp.RequestCtx) {
 		fmt.Printf("found idn: %v\n", idn)
 		// Insert servers into the "servers" table.
 		for _, endpoint := range labsResponse.Endpoints {
-			if _, err := db.Exec("INSERT INTO servers (domain_id, address, ssl_grade, country, owner) VALUES ($1, $2, $3, $4, $5)", idn, endpoint.IpAddress, endpoint.Grade, "Colombia", "Sebas"); err != nil {
+			// Get id if server already exists
+			sel := "SELECT id FROM servers WHERE address=$1"
+			var idm string
+			err = db.QueryRow(sel, endpoint.IpAddress).Scan(&idm)
+			if err != nil && err != sql.ErrNoRows {
 				log.Fatal(err)
+			}
+
+			if len(idm) > 0 {
+				fmt.Printf("found idm: %v\n", idm)
+			} else {
+				if _, err := db.Exec("INSERT INTO servers (domain_id, address, ssl_grade, country, owner) VALUES ($1, $2, $3, $4, $5)", idn, endpoint.IpAddress, endpoint.Grade, "Colombia", "Sebas"); err != nil {
+					log.Fatal(err)
+				}
 			}
 		}
 
