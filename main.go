@@ -52,7 +52,7 @@ func GetDomains(ctx *fasthttp.RequestCtx) {
 	defer db.Close()
 
 	// Return the domains.
-	rows, err := db.Query("SELECT domain FROM servers")
+	rows, err := db.Query("SELECT domain FROM domains")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -82,14 +82,14 @@ func Search(ctx *fasthttp.RequestCtx) {
 	}
 	defer db.Close()
 
-	// Create the "servers" table.
+	// Create the "domains" table.
 	if _, err := db.Exec(
-		"CREATE TABLE IF NOT EXISTS servers (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), domain STRING )"); err != nil {
+		"CREATE TABLE IF NOT EXISTS domains (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), domain STRING )"); err != nil {
 		log.Fatal(err)
 	}
 
-	// Insert domain into the "servers" table.
-	tblname := "servers"
+	// Insert domain into the "domains" table.
+	tblname := "domains"
 	quoted := pq.QuoteIdentifier(tblname)
 	if _, err := db.Exec(
 		fmt.Sprintf("INSERT INTO %s (domain) VALUES ($1)", quoted), domain); err != nil {
