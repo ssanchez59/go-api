@@ -127,12 +127,26 @@ func Search(ctx *fasthttp.RequestCtx) {
 	jsonInfo, _ := json.Marshal(serverInfo)
 	fmt.Fprintf(ctx, "%s\n", jsonInfo)
 
-	// Insert domain into the "domains" table.
-	tblname := "domains"
-	quoted := pq.QuoteIdentifier(tblname)
-	if _, err := db.Exec(
-		fmt.Sprintf("INSERT INTO %s (domain) VALUES ($1)", quoted), domain); err != nil {
+	// Get id if domain already exists
+	sel := "SELECT id FROM domains WHERE domain= $1"
+
+	var idn string
+	err = db.QueryRow(sel, domain).Scan(&idn)
+	if err != nil && err != sql.ErrNoRows {
 		log.Fatal(err)
+	}
+
+	if len(idn) > 0 {
+		fmt.Printf("found idn: %v\n", idn)
+	} else {
+		fmt.Printf("created idn: %v\n", idn)
+		// Insert domain into the "domains" table.
+		tblname := "domains"
+		quoted := pq.QuoteIdentifier(tblname)
+		if _, err := db.Exec(
+			fmt.Sprintf("INSERT INTO %s (domain) VALUES ($1)", quoted), domain); err != nil {
+			log.Fatal(err)
+		}
 	}
 }
 
