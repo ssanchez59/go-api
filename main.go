@@ -14,6 +14,10 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
+type Domain struct {
+	Name string
+}
+
 type Server struct {
 	Address   string
 	Ssl_grade string
@@ -39,7 +43,31 @@ type Endpoint struct {
 }
 
 func Index(ctx *fasthttp.RequestCtx) {
-	fmt.Fprint(ctx, "Welcome!\n")
+	// Connect to the "api_info" database.
+	db, err := sql.Open("postgres",
+		"postgresql://maxroach@localhost:26257/api_info?ssl=true&sslmode=require&sslrootcert=certs/ca.crt&sslkey=certs/client.maxroach.key&sslcert=certs/client.maxroach.crt")
+	if err != nil {
+		log.Fatal("error connecting to the database: ", err)
+	}
+	defer db.Close()
+
+	// Return the domains.
+	rows, err := db.Query("SELECT domain FROM servers")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	var domains []Domain
+	for rows.Next() {
+		var domain string
+		if err := rows.Scan(&domain); err != nil {
+			log.Fatal(err)
+		}
+		domains = append(domains, Domain{domain})
+	}
+	jsonInfo, _ := json.Marshal(domains)
+	fmt.Fprintf(ctx, "%s\n", jsonInfo)
 }
 
 func Hello(ctx *fasthttp.RequestCtx) {
@@ -103,7 +131,7 @@ func Hello(ctx *fasthttp.RequestCtx) {
 
 func main() {
 	router := fasthttprouter.New()
-	router.GET("/", Index)
+	router.GET("/getDomains", Index)
 	router.GET("/hello/:domain", Hello)
 
 	log.Println("Listening on localhost:8000")
