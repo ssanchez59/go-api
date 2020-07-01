@@ -32,7 +32,7 @@ type ServerInfo struct {
 	Ssl_grade          string
 	Previous_ssl_grade string
 	Logo               string
-	title              string
+	Title              string
 	Is_down            bool
 }
 
