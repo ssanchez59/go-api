@@ -42,7 +42,7 @@ type Endpoint struct {
 	Grade     string
 }
 
-func Index(ctx *fasthttp.RequestCtx) {
+func GetDomains(ctx *fasthttp.RequestCtx) {
 	// Connect to the "api_info" database.
 	db, err := sql.Open("postgres",
 		"postgresql://maxroach@localhost:26257/api_info?ssl=true&sslmode=require&sslrootcert=certs/ca.crt&sslkey=certs/client.maxroach.key&sslcert=certs/client.maxroach.crt")
@@ -70,7 +70,7 @@ func Index(ctx *fasthttp.RequestCtx) {
 	fmt.Fprintf(ctx, "%s\n", jsonInfo)
 }
 
-func Hello(ctx *fasthttp.RequestCtx) {
+func Search(ctx *fasthttp.RequestCtx) {
 	// fmt.Fprintf(ctx, "hello, %s!\n", ctx.UserValue("domain"))
 	domain := ctx.UserValue("domain").(string)
 
@@ -131,8 +131,8 @@ func Hello(ctx *fasthttp.RequestCtx) {
 
 func main() {
 	router := fasthttprouter.New()
-	router.GET("/getDomains", Index)
-	router.GET("/hello/:domain", Hello)
+	router.GET("/getDomains", GetDomains)
+	router.GET("/search/:domain", Search)
 
 	log.Println("Listening on localhost:8000")
 
