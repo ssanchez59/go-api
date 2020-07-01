@@ -25,7 +25,6 @@ type Server struct {
 
 type ServerInfo struct {
 	Name               string
-	Servers            []Server
 	Servers_changed    bool
 	Ssl_grade          string
 	Previous_ssl_grade string
@@ -144,12 +143,38 @@ func Search(ctx *fasthttp.RequestCtx) {
 				log.Fatal(err)
 			}
 		}
+
+		// Return the domain info.
+		rows, err := db.Query("SELECT * FROM domains where domain=$1", domain)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer rows.Close()
+
+		var serverInfo ServerInfo
+		for rows.Next() {
+			var id string
+			var domain string
+			var servers_changed bool
+			var ssl_grade string
+			var previous_ssl_grade string
+			var logo string
+			var title string
+			var is_down bool
+			if err := rows.Scan(&id, &domain, &servers_changed, &ssl_grade, &previous_ssl_grade, &logo, &title, &is_down); err != nil {
+				log.Fatal(err)
+			}
+			serverInfo = ServerInfo{domain, servers_changed, ssl_grade, previous_ssl_grade, logo, title, is_down}
+		}
+		jsonInfo, _ := json.Marshal(serverInfo)
+		fmt.Fprintf(ctx, "%s\n", jsonInfo)
+
 	} else {
 		// Insert domain into the "domains" table.
 		tblname := "domains"
 		quoted := pq.QuoteIdentifier(tblname)
 		fmt.Printf("quoted: %v\n", quoted)
-		if _, err := db.Exec("INSERT INTO domains (domain) VALUES ($1)", domain); err != nil {
+		if _, err := db.Exec("INSERT INTO domains (domain, servers_changed, ssl_grade, previous_ssl_grade, logo, title, is_down) VALUES ($1, $2, $3, $4, $5, $6, $7)", domain, false, "A+", "B+", "myLogo", "myTitle", false); err != nil {
 			log.Fatal(err)
 		}
 
@@ -167,6 +192,32 @@ func Search(ctx *fasthttp.RequestCtx) {
 				log.Fatal(err)
 			}
 		}
+
+		// Return the domain info.
+		rows, err := db.Query("SELECT * FROM domains where domain=$1", domain)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer rows.Close()
+
+		var serverInfo ServerInfo
+		for rows.Next() {
+			var id string
+			var domain string
+			var servers_changed bool
+			var ssl_grade string
+			var previous_ssl_grade string
+			var logo string
+			var title string
+			var is_down bool
+			if err := rows.Scan(&id, &domain, &servers_changed, &ssl_grade, &previous_ssl_grade, &logo, &title, &is_down); err != nil {
+				log.Fatal(err)
+			}
+
+			serverInfo = ServerInfo{domain, servers_changed, ssl_grade, previous_ssl_grade, logo, title, is_down}
+		}
+		jsonInfo, _ := json.Marshal(serverInfo)
+		fmt.Fprintf(ctx, "%s\n", jsonInfo)
 	}
 }
 
