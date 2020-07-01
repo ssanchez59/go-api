@@ -88,14 +88,13 @@ func Search(ctx *fasthttp.RequestCtx) {
 		log.Fatal(err)
 	}
 
-	// Insert domain into the "domains" table.
-	tblname := "domains"
-	quoted := pq.QuoteIdentifier(tblname)
+	// Create the "servers" table.
 	if _, err := db.Exec(
-		fmt.Sprintf("INSERT INTO %s (domain) VALUES ($1)", quoted), domain); err != nil {
+		"CREATE TABLE IF NOT EXISTS servers (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), domain_id UUID REFERENCES domains(id) ON DELETE CASCADE,ssl_grade string, country string, owner string)"); err != nil {
 		log.Fatal(err)
 	}
 
+	// Get info from SSL Labs
 	url := "https://api.ssllabs.com/api/v3/analyze?host=" + domain
 	fmt.Println("URL:>", url)
 
@@ -127,6 +126,14 @@ func Search(ctx *fasthttp.RequestCtx) {
 	serverInfo.Servers = servers
 	jsonInfo, _ := json.Marshal(serverInfo)
 	fmt.Fprintf(ctx, "%s\n", jsonInfo)
+
+	// Insert domain into the "domains" table.
+	tblname := "domains"
+	quoted := pq.QuoteIdentifier(tblname)
+	if _, err := db.Exec(
+		fmt.Sprintf("INSERT INTO %s (domain) VALUES ($1)", quoted), domain); err != nil {
+		log.Fatal(err)
+	}
 }
 
 func main() {
