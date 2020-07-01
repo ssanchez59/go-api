@@ -84,7 +84,7 @@ func Search(ctx *fasthttp.RequestCtx) {
 
 	// Create the "domains" table.
 	if _, err := db.Exec(
-		"CREATE TABLE IF NOT EXISTS domains (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), domain STRING )"); err != nil {
+		"CREATE TABLE IF NOT EXISTS domains (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), domain STRING, servers_changed bool, ssl_grade string, previous_ssl_grade string, logo string, title string, is_down bool )"); err != nil {
 		log.Fatal(err)
 	}
 
