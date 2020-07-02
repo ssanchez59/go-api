@@ -152,6 +152,9 @@ func Search(ctx *fasthttp.RequestCtx) {
 
 			if len(idm) > 0 {
 				fmt.Printf("found idm: %v\n", idm)
+				if _, err := db.Exec("UPDATE servers SET domain_id=$1, address=$2, ssl_grade=$3, country=$4, owner=$5 WHERE id=$6", idn, endpoint.IpAddress, endpoint.Grade, "Italia", "Matteo", idm); err != nil {
+					log.Fatal(err)
+				}
 			} else {
 				if _, err := db.Exec("INSERT INTO servers (domain_id, address, ssl_grade, country, owner) VALUES ($1, $2, $3, $4, $5)", idn, endpoint.IpAddress, endpoint.Grade, "Colombia", "Sebas"); err != nil {
 					log.Fatal(err)
