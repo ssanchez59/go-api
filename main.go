@@ -40,6 +40,7 @@ type ServerInfo struct {
 
 type LabsResponse struct {
 	Endpoints []Endpoint
+	Status    string
 }
 
 type Endpoint struct {
@@ -222,7 +223,13 @@ func Search(ctx *fasthttp.RequestCtx) {
 		tblname := "domains"
 		quoted := pq.QuoteIdentifier(tblname)
 		fmt.Printf("quoted: %v\n", quoted)
-		if _, err := db.Exec("INSERT INTO domains (domain, servers_changed, previous_ssl_grade, logo, title, is_down) VALUES ($1, $2, $3, $4, $5, $6)", domain, false, "Previous Grade", "myLogo", "myTitle", false); err != nil {
+
+		isDown := true
+		if labsResponse.Status == "Ready" {
+			isDown = false
+		}
+
+		if _, err := db.Exec("INSERT INTO domains (domain, servers_changed, previous_ssl_grade, logo, title, is_down) VALUES ($1, $2, $3, $4, $5, $6)", domain, false, "Previous Grade", "myLogo", "myTitle", isDown); err != nil {
 			log.Fatal(err)
 		}
 
