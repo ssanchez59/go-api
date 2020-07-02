@@ -154,62 +154,14 @@ func Search(ctx *fasthttp.RequestCtx) {
 			}
 
 			if len(idm) > 0 {
-				cmd := "whois " + endpoint.IpAddress
-				err, out, errout := Shellout(cmd)
-				if err != nil {
-					log.Printf("error: %v\n", err)
-				}
-				if errout != "" {
-					log.Printf("error: %v\n", errout)
-				}
-				i := strings.Index(out, "Country:")
-
-				country := ""
-				if i > -1 {
-					country = out[i+16 : i+18]
-				} else {
-					fmt.Println("Index not found")
-				}
-
-				i = strings.Index(out, "OrgName:")
-
-				organization := ""
-				if i > -1 {
-					organization = out[i+16 : i+22]
-				} else {
-					fmt.Println("Index not found")
-				}
+				country, organization := getCountryOwner(endpoint.IpAddress)
 
 				fmt.Printf("found idm: %v\n", idm)
 				if _, err := db.Exec("UPDATE servers SET domain_id=$1, address=$2, ssl_grade=$3, country=$4, owner=$5 WHERE id=$6", idn, endpoint.IpAddress, endpoint.Grade, country, organization, idm); err != nil {
 					log.Fatal(err)
 				}
 			} else {
-				cmd := "whois " + endpoint.IpAddress
-				err, out, errout := Shellout(cmd)
-				if err != nil {
-					log.Printf("error: %v\n", err)
-				}
-				if errout != "" {
-					log.Printf("error: %v\n", errout)
-				}
-				i := strings.Index(out, "Country:")
-
-				country := ""
-				if i > -1 {
-					country = out[i+15 : i+18]
-				} else {
-					fmt.Println("Index not found")
-				}
-
-				i = strings.Index(out, "OrgName:")
-
-				organization := ""
-				if i > -1 {
-					organization = out[i+16 : i+22]
-				} else {
-					fmt.Println("Index not found")
-				}
+				country, organization := getCountryOwner(endpoint.IpAddress)
 
 				if _, err := db.Exec("INSERT INTO servers (domain_id, address, ssl_grade, country, owner) VALUES ($1, $2, $3, $4, $5)", idn, endpoint.IpAddress, endpoint.Grade, country, organization); err != nil {
 					log.Fatal(err)
@@ -243,31 +195,8 @@ func Search(ctx *fasthttp.RequestCtx) {
 
 		// Insert servers into the "servers" table.
 		for _, endpoint := range labsResponse.Endpoints {
-			cmd := "whois " + endpoint.IpAddress
-			err, out, errout := Shellout(cmd)
-			if err != nil {
-				log.Printf("error: %v\n", err)
-			}
-			if errout != "" {
-				log.Printf("error: %v\n", errout)
-			}
-			i := strings.Index(out, "Country:")
 
-			country := ""
-			if i > -1 {
-				country = out[i+15 : i+18]
-			} else {
-				fmt.Println("Index not found")
-			}
-
-			i = strings.Index(out, "OrgName:")
-
-			organization := ""
-			if i > -1 {
-				organization = out[i+16 : i+22]
-			} else {
-				fmt.Println("Index not found")
-			}
+			country, organization := getCountryOwner(endpoint.IpAddress)
 
 			if _, err := db.Exec("INSERT INTO servers (domain_id, address, ssl_grade, country, owner) VALUES ($1, $2, $3, $4, $5)", idn, endpoint.IpAddress, endpoint.Grade, country, organization); err != nil {
 				log.Fatal(err)
@@ -353,6 +282,36 @@ func Shellout(command string) (error, string, string) {
 	cmd.Stderr = &stderr
 	err := cmd.Run()
 	return err, stdout.String(), stderr.String()
+}
+
+func getCountryOwner(ipAdd string) (string, string) {
+	cmd := "whois " + ipAdd
+	err, out, errout := Shellout(cmd)
+	if err != nil {
+		log.Printf("error: %v\n", err)
+	}
+	if errout != "" {
+		log.Printf("error: %v\n", errout)
+	}
+	i := strings.Index(out, "Country:")
+
+	country := ""
+	if i > -1 {
+		country = out[i+16 : i+18]
+	} else {
+		fmt.Println("Index not found")
+	}
+
+	i = strings.Index(out, "OrgName:")
+
+	organization := ""
+	if i > -1 {
+		organization = out[i+16 : i+22]
+	} else {
+		fmt.Println("Index not found")
+	}
+
+	return country, organization
 }
 
 func main() {
