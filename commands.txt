@@ -1,0 +1,3 @@
+cockroach sql --certs-dir=certs
+CREATE DATABASE api_info;
+GRANT ALL ON DATABASE api_info TO maxroach;
