@@ -158,48 +158,8 @@ func Search(ctx *fasthttp.RequestCtx) {
 				}
 			}
 		}
-
-		// Return the domain info.
-		var id string
-		var domain string
-		var servers_changed bool
-		var ssl_grade string
-		var previous_ssl_grade string
-		var logo string
-		var title string
-		var is_down bool
-		var serverInfo ServerInfo
-		sel = "SELECT * FROM domains WHERE id= $1"
-		err = db.QueryRow(sel, idn).Scan(&id, &domain, &servers_changed, &ssl_grade, &previous_ssl_grade, &logo, &title, &is_down)
-		if err != nil && err != sql.ErrNoRows {
-			log.Fatal(err)
-		}
-
-		// Return the servers info.
-		rows, err := db.Query("SELECT * FROM servers where domain_id=$1", idn)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer rows.Close()
-
-		var servers []Server
-		for rows.Next() {
-			var id string
-			var domain_id string
-			var address string
-			var ssl_grade string
-			var country string
-			var owner string
-			if err := rows.Scan(&id, &domain_id, &address, &ssl_grade, &country, &owner); err != nil {
-				log.Fatal(err)
-			}
-			servers = append(servers, Server{address, ssl_grade, country, owner})
-		}
-
-		serverInfo = ServerInfo{domain, servers, servers_changed, ssl_grade, previous_ssl_grade, logo, title, is_down}
-		jsonInfo, _ := json.Marshal(serverInfo)
-		fmt.Fprintf(ctx, "%s\n", jsonInfo)
-
+		// respond to request
+		returnInfo(ctx, idn)
 	} else {
 		// Insert domain into the "domains" table.
 		tblname := "domains"
@@ -219,54 +179,64 @@ func Search(ctx *fasthttp.RequestCtx) {
 
 		// Insert servers into the "servers" table.
 		for _, endpoint := range labsResponse.Endpoints {
-
 			if _, err := db.Exec("INSERT INTO servers (domain_id, address, ssl_grade, country, owner) VALUES ($1, $2, $3, $4, $5)", idn, endpoint.IpAddress, endpoint.Grade, "Colombia", "Sebas"); err != nil {
 				log.Fatal(err)
 			}
-
 		}
-
-		// Return the domain info.
-		var id string
-		var domain string
-		var servers_changed bool
-		var ssl_grade string
-		var previous_ssl_grade string
-		var logo string
-		var title string
-		var is_down bool
-		var serverInfo ServerInfo
-		sel = "SELECT * FROM domains WHERE id= $1"
-		err = db.QueryRow(sel, idn).Scan(&id, &domain, &servers_changed, &ssl_grade, &previous_ssl_grade, &logo, &title, &is_down)
-		if err != nil && err != sql.ErrNoRows {
-			log.Fatal(err)
-		}
-
-		// Return the servers info.
-		rows, err := db.Query("SELECT * FROM servers where domain_id=$1", idn)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer rows.Close()
-
-		var servers []Server
-		for rows.Next() {
-			var id string
-			var domain_id string
-			var address string
-			var ssl_grade string
-			var country string
-			var owner string
-			if err := rows.Scan(&id, &domain_id, &address, &ssl_grade, &country, &owner); err != nil {
-				log.Fatal(err)
-			}
-			servers = append(servers, Server{address, ssl_grade, country, owner})
-		}
-
-		serverInfo = ServerInfo{domain, servers, servers_changed, ssl_grade, previous_ssl_grade, logo, title, is_down}
-		jsonInfo, _ := json.Marshal(serverInfo)
-		fmt.Fprintf(ctx, "%s\n", jsonInfo)
+		// respond to request
+		returnInfo(ctx, idn)
 	}
+}
+
+func returnInfo(ctx *fasthttp.RequestCtx, idn string) {
+	// Connect to the "api_info" database.
+	db, err := sql.Open("postgres",
+		"postgresql://maxroach@localhost:26257/api_info?ssl=true&sslmode=require&sslrootcert=certs/ca.crt&sslkey=certs/client.maxroach.key&sslcert=certs/client.maxroach.crt")
+	if err != nil {
+		log.Fatal("error connecting to the database: ", err)
+	}
+	defer db.Close()
+
+	// Return the domain info.
+	var id string
+	var domain string
+	var servers_changed bool
+	var ssl_grade string
+	var previous_ssl_grade string
+	var logo string
+	var title string
+	var is_down bool
+	var serverInfo ServerInfo
+	sel := "SELECT * FROM domains WHERE id= $1"
+	err = db.QueryRow(sel, idn).Scan(&id, &domain, &servers_changed, &ssl_grade, &previous_ssl_grade, &logo, &title, &is_down)
+	if err != nil && err != sql.ErrNoRows {
+		log.Fatal(err)
+	}
+
+	// Return the servers info.
+	rows, err := db.Query("SELECT * FROM servers where domain_id=$1", idn)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	var servers []Server
+	for rows.Next() {
+		var id string
+		var domain_id string
+		var address string
+		var ssl_grade string
+		var country string
+		var owner string
+		if err := rows.Scan(&id, &domain_id, &address, &ssl_grade, &country, &owner); err != nil {
+			log.Fatal(err)
+		}
+		servers = append(servers, Server{address, ssl_grade, country, owner})
+	}
+
+	serverInfo = ServerInfo{domain, servers, servers_changed, ssl_grade, previous_ssl_grade, logo, title, is_down}
+	jsonInfo, _ := json.Marshal(serverInfo)
+	fmt.Fprintf(ctx, "%s\n", jsonInfo)
 }
 
 func main() {
