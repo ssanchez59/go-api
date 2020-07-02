@@ -193,7 +193,7 @@ func Search(ctx *fasthttp.RequestCtx) {
 				if errout != "" {
 					log.Printf("error: %v\n", errout)
 				}
-				i := strings.Index(out, "Country")
+				i := strings.Index(out, "Country:")
 
 				country := ""
 				if i > -1 {
@@ -202,7 +202,7 @@ func Search(ctx *fasthttp.RequestCtx) {
 					fmt.Println("Index not found")
 				}
 
-				i = strings.Index(out, "OrgName")
+				i = strings.Index(out, "OrgName:")
 
 				organization := ""
 				if i > -1 {
