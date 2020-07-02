@@ -87,7 +87,7 @@ func Search(ctx *fasthttp.RequestCtx) {
 
 	// Create the "domains" table.
 	if _, err := db.Exec(
-		"CREATE TABLE IF NOT EXISTS domains (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), domain STRING, servers_changed bool, ssl_grade string, previous_ssl_grade string, logo string, title string, is_down bool )"); err != nil {
+		"CREATE TABLE IF NOT EXISTS domains (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), domain STRING, servers_changed bool, previous_ssl_grade string, logo string, title string, is_down bool )"); err != nil {
 		log.Fatal(err)
 	}
 
@@ -168,7 +168,7 @@ func Search(ctx *fasthttp.RequestCtx) {
 		tblname := "domains"
 		quoted := pq.QuoteIdentifier(tblname)
 		fmt.Printf("quoted: %v\n", quoted)
-		if _, err := db.Exec("INSERT INTO domains (domain, servers_changed, ssl_grade, previous_ssl_grade, logo, title, is_down) VALUES ($1, $2, $3, $4, $5, $6, $7)", domain, false, "A+", "B+", "myLogo", "myTitle", false); err != nil {
+		if _, err := db.Exec("INSERT INTO domains (domain, servers_changed, previous_ssl_grade, logo, title, is_down) VALUES ($1, $2, $3, $4, $5, $6)", domain, false, "B", "myLogo", "myTitle", false); err != nil {
 			log.Fatal(err)
 		}
 
@@ -204,14 +204,13 @@ func returnInfo(ctx *fasthttp.RequestCtx, idn string) {
 	var id string
 	var domain string
 	var servers_changed bool
-	var ssl_grade string
 	var previous_ssl_grade string
 	var logo string
 	var title string
 	var is_down bool
 	var serverInfo ServerInfo
 	sel := "SELECT * FROM domains WHERE id= $1"
-	err = db.QueryRow(sel, idn).Scan(&id, &domain, &servers_changed, &ssl_grade, &previous_ssl_grade, &logo, &title, &is_down)
+	err = db.QueryRow(sel, idn).Scan(&id, &domain, &servers_changed, &previous_ssl_grade, &logo, &title, &is_down)
 	if err != nil && err != sql.ErrNoRows {
 		log.Fatal(err)
 	}
@@ -222,6 +221,9 @@ func returnInfo(ctx *fasthttp.RequestCtx, idn string) {
 		log.Fatal(err)
 	}
 	defer rows.Close()
+
+	grades := [8]string{"F", "E", "D", "C", "B", "A-", "A", "A+"}
+	ssl_grade_to_report := grades[7]
 
 	var servers []Server
 	for rows.Next() {
@@ -234,12 +236,24 @@ func returnInfo(ctx *fasthttp.RequestCtx, idn string) {
 		if err := rows.Scan(&id, &domain_id, &address, &ssl_grade, &country, &owner); err != nil {
 			log.Fatal(err)
 		}
+		if indexOf(ssl_grade, grades) < indexOf(ssl_grade_to_report, grades) {
+			ssl_grade_to_report = grades[indexOf(ssl_grade, grades)]
+		}
 		servers = append(servers, Server{address, ssl_grade, country, owner})
 	}
 
-	serverInfo = ServerInfo{domain, servers, servers_changed, ssl_grade, previous_ssl_grade, logo, title, is_down}
+	serverInfo = ServerInfo{domain, servers, servers_changed, ssl_grade_to_report, previous_ssl_grade, logo, title, is_down}
 	jsonInfo, _ := json.Marshal(serverInfo)
 	fmt.Fprintf(ctx, "%s\n", jsonInfo)
+}
+
+func indexOf(element string, data [8]string) int {
+	for k, v := range data {
+		if element == v {
+			return k
+		}
+	}
+	return -1 //not found.
 }
 
 func main() {
