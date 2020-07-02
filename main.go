@@ -168,7 +168,7 @@ func Search(ctx *fasthttp.RequestCtx) {
 		tblname := "domains"
 		quoted := pq.QuoteIdentifier(tblname)
 		fmt.Printf("quoted: %v\n", quoted)
-		if _, err := db.Exec("INSERT INTO domains (domain, servers_changed, previous_ssl_grade, logo, title, is_down) VALUES ($1, $2, $3, $4, $5, $6)", domain, false, "B", "myLogo", "myTitle", false); err != nil {
+		if _, err := db.Exec("INSERT INTO domains (domain, servers_changed, previous_ssl_grade, logo, title, is_down) VALUES ($1, $2, $3, $4, $5, $6)", domain, false, "Previous Grade", "myLogo", "myTitle", false); err != nil {
 			log.Fatal(err)
 		}
 
