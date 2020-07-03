@@ -50,6 +50,7 @@ type Endpoint struct {
 }
 
 func GetDomains(ctx *fasthttp.RequestCtx) {
+	ctx.Response.Header.Set("Access-Control-Allow-Origin", "*")
 	// Connect to the "api_info" database.
 	db, err := sql.Open("postgres",
 		"postgresql://maxroach@localhost:26257/api_info?ssl=true&sslmode=require&sslrootcert=certs/ca.crt&sslkey=certs/client.maxroach.key&sslcert=certs/client.maxroach.crt")
@@ -84,6 +85,7 @@ func GetDomains(ctx *fasthttp.RequestCtx) {
 }
 
 func Search(ctx *fasthttp.RequestCtx) {
+	ctx.Response.Header.Set("Access-Control-Allow-Origin", "*")
 	// fmt.Fprintf(ctx, "hello, %s!\n", ctx.UserValue("domain"))
 	domain := ctx.UserValue("domain").(string)
 
