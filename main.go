@@ -60,7 +60,7 @@ func GetDomains(ctx *fasthttp.RequestCtx) {
 
 	// Create the "domains" table.
 	if _, err := db.Exec(
-		"CREATE TABLE IF NOT EXISTS domains (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), domain STRING, servers_changed bool, previous_ssl_grade string, logo string, title string, is_down bool )"); err != nil {
+		"CREATE TABLE IF NOT EXISTS domains (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), domain STRING, servers_changed bool, ssl_grade string, previous_ssl_grade string, logo string, title string, is_down bool )"); err != nil {
 		log.Fatal(err)
 	}
 
@@ -184,8 +184,18 @@ func Search(ctx *fasthttp.RequestCtx) {
 			log.Fatal(err)
 		}
 
+		// Get previousGrade
+		var previousGrade string
+		sel := "SELECT ssl_grade FROM domains WHERE id=$1"
+		err = db.QueryRow(sel, idn).Scan(&previousGrade)
+		if err != nil && err != sql.ErrNoRows {
+			log.Fatal(err)
+		}
+
 		// respond to request
-		returnInfo(ctx, idn)
+		returnInfo(ctx, idn, previousGrade)
+
+		//domain doesn't exist
 	} else {
 		// Insert domain into the "domains" table.
 		tblname := "domains"
@@ -193,14 +203,14 @@ func Search(ctx *fasthttp.RequestCtx) {
 		fmt.Printf("quoted: %v\n", quoted)
 
 		isDown := true
-		if labsResponse.Status == "Ready" {
+		if labsResponse.Status == "Ready" || labsResponse.Status == "READY" {
 			isDown = false
 		}
 
 		title, logo := getTitleLogo(domain)
 
 		// add domain
-		if _, err := db.Exec("INSERT INTO domains (domain, servers_changed, previous_ssl_grade, logo, title, is_down) VALUES ($1, $2, $3, $4, $5, $6)", domain, false, "Previous Grade", logo, title, isDown); err != nil {
+		if _, err := db.Exec("INSERT INTO domains (domain, servers_changed, ssl_grade,previous_ssl_grade, logo, title, is_down) VALUES ($1, $2, $3, $4, $5, $6, $7)", domain, false, "to update", "no info", logo, title, isDown); err != nil {
 			log.Fatal(err)
 		}
 
@@ -222,11 +232,11 @@ func Search(ctx *fasthttp.RequestCtx) {
 			}
 		}
 		// respond to request
-		returnInfo(ctx, idn)
+		returnInfo(ctx, idn, "no info")
 	}
 }
 
-func returnInfo(ctx *fasthttp.RequestCtx, idn string) {
+func returnInfo(ctx *fasthttp.RequestCtx, idn string, previousGrade string) {
 	// Connect to the "api_info" database.
 	db, err := sql.Open("postgres",
 		"postgresql://maxroach@localhost:26257/api_info?ssl=true&sslmode=require&sslrootcert=certs/ca.crt&sslkey=certs/client.maxroach.key&sslcert=certs/client.maxroach.crt")
@@ -239,13 +249,14 @@ func returnInfo(ctx *fasthttp.RequestCtx, idn string) {
 	var id string
 	var domain string
 	var servers_changed bool
+	var ssl_grade string
 	var previous_ssl_grade string
 	var logo string
 	var title string
 	var is_down bool
 	var serverInfo ServerInfo
 	sel := "SELECT * FROM domains WHERE id= $1"
-	err = db.QueryRow(sel, idn).Scan(&id, &domain, &servers_changed, &previous_ssl_grade, &logo, &title, &is_down)
+	err = db.QueryRow(sel, idn).Scan(&id, &domain, &servers_changed, &ssl_grade, &previous_ssl_grade, &logo, &title, &is_down)
 	if err != nil && err != sql.ErrNoRows {
 		log.Fatal(err)
 	}
@@ -277,7 +288,19 @@ func returnInfo(ctx *fasthttp.RequestCtx, idn string) {
 		servers = append(servers, Server{address, ssl_grade, country, owner})
 	}
 
-	serverInfo = ServerInfo{domain, servers, servers_changed, ssl_grade_to_report, previous_ssl_grade, logo, title, is_down}
+	// if domain doesn't exist
+	if previousGrade == "no info" {
+		if _, err := db.Exec("UPDATE domains SET ssl_grade=$1 WHERE id=$2", ssl_grade_to_report, idn); err != nil {
+			log.Fatal(err)
+		}
+		// domain exists
+	} else {
+		if _, err := db.Exec("UPDATE domains SET ssl_grade=$1, previous_ssl_grade=$2 WHERE id=$3", ssl_grade_to_report, previousGrade, idn); err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	serverInfo = ServerInfo{domain, servers, servers_changed, ssl_grade_to_report, previousGrade, logo, title, is_down}
 	jsonInfo, _ := json.Marshal(serverInfo)
 	fmt.Fprintf(ctx, "%s\n", jsonInfo)
 }
