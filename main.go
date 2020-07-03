@@ -177,9 +177,9 @@ func Search(ctx *fasthttp.RequestCtx) {
 		}
 
 		//get Title
-		title := getTitle(domain)
+		title, logo := getTitleLogo(domain)
 
-		if _, err := db.Exec("UPDATE domains SET title=$1 WHERE id=$2", title, idn); err != nil {
+		if _, err := db.Exec("UPDATE domains SET title=$1, logo=$2 WHERE id=$3", title, logo, idn); err != nil {
 			log.Fatal(err)
 		}
 
@@ -196,10 +196,10 @@ func Search(ctx *fasthttp.RequestCtx) {
 			isDown = false
 		}
 
-		title := getTitle(domain)
+		title, logo := getTitleLogo(domain)
 
 		// add domain
-		if _, err := db.Exec("INSERT INTO domains (domain, servers_changed, previous_ssl_grade, logo, title, is_down) VALUES ($1, $2, $3, $4, $5, $6)", domain, false, "Previous Grade", "myLogo", title, isDown); err != nil {
+		if _, err := db.Exec("INSERT INTO domains (domain, servers_changed, previous_ssl_grade, logo, title, is_down) VALUES ($1, $2, $3, $4, $5, $6)", domain, false, "Previous Grade", logo, title, isDown); err != nil {
 			log.Fatal(err)
 		}
 
@@ -332,9 +332,9 @@ func getCountryOwner(ipAdd string) (string, string) {
 	return country, organization
 }
 
-func getTitle(domain string) string {
+func getTitleLogo(domain string) (string, string) {
 
-	title := ""
+	title, logo := "", ""
 
 	// Instantiate default collector
 	c := colly.NewCollector()
@@ -345,24 +345,22 @@ func getTitle(domain string) string {
 	})
 
 	// On every a element which has href attribute call callback
-	// c.OnHTML("a[href]", func(e *colly.HTMLElement) {
-	// 	link := e.Attr("href")
-	// 	// Print link
-	// 	fmt.Printf("Link found: %q -> %s\n", e.Text, link)
-	// 	// Visit link found on page
-	// 	// Only those links are visited which are in AllowedDomains
-	// 	c.Visit(e.Request.AbsoluteURL(link))
-	// })
+	c.OnHTML("head meta[content]", func(e *colly.HTMLElement) {
+		myElem := e.Attr("content")
+		if strings.Contains(myElem, ".png") && logo == "" {
+			logo = myElem
+		}
+	})
 
 	// Before making a request print "Visiting ..."
-	c.OnRequest(func(r *colly.Request) {
-		fmt.Println("Visiting", r.URL.String())
-	})
+	// c.OnRequest(func(r *colly.Request) {
+	// 	fmt.Println("Visiting", r.URL.String())
+	// })
 
 	// Start scraping on https://hackerspaces.org
 	c.Visit("https://" + domain + "/")
 
-	return title
+	return title, logo
 }
 
 func main() {
