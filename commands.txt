@@ -1,3 +1,4 @@
+cockroach start --certs-dir=certs --store=node1 --listen-addr=localhost:26257 --http-addr=localhost:8080 --join=localhost:26257,localhost:26258,localhost:26259 --background
 cockroach sql --certs-dir=certs
 CREATE DATABASE api_info;
 GRANT ALL ON DATABASE api_info TO maxroach;
