@@ -187,6 +187,9 @@ func Search(ctx *fasthttp.RequestCtx) {
 			isDown = false
 		}
 
+		title := getTitle(domain)
+		fmt.Printf("title: %s", title)
+
 		if _, err := db.Exec("INSERT INTO domains (domain, servers_changed, previous_ssl_grade, logo, title, is_down) VALUES ($1, $2, $3, $4, $5, $6)", domain, false, "Previous Grade", "myLogo", "myTitle", isDown); err != nil {
 			log.Fatal(err)
 		}
@@ -318,6 +321,25 @@ func getCountryOwner(ipAdd string) (string, string) {
 	}
 
 	return country, organization
+}
+
+func getTitle(domain string) string {
+
+	title := ""
+	// c := colly.NewCollector()
+
+	// // Find and visit all links
+	// c.OnHTML("a[href]", func(e *colly.HTMLElement) {
+	// 	e.Request.Visit(e.Attr("href"))
+	// })
+
+	// c.OnRequest(func(r *colly.Request) {
+	// 	fmt.Println("Visiting", r.URL)
+	// })
+
+	// c.Visit(domain)
+
+	return title
 }
 
 func main() {
