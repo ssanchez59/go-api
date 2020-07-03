@@ -57,6 +57,12 @@ func GetDomains(ctx *fasthttp.RequestCtx) {
 	}
 	defer db.Close()
 
+	// Create the "domains" table.
+	if _, err := db.Exec(
+		"CREATE TABLE IF NOT EXISTS domains (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), domain STRING, servers_changed bool, previous_ssl_grade string, logo string, title string, is_down bool )"); err != nil {
+		log.Fatal(err)
+	}
+
 	// Return the domains.
 	rows, err := db.Query("SELECT domain FROM domains")
 	if err != nil {
