@@ -14,6 +14,7 @@ import (
 	"github.com/buaazp/fasthttprouter"
 	"github.com/gocolly/colly/v2"
 	"github.com/lib/pq"
+	"github.com/openrdap/rdap"
 	"github.com/valyala/fasthttp"
 )
 
@@ -329,6 +330,20 @@ func Shellout(command string) (error, string, string) {
 }
 
 func getCountryOwner(ipAdd string) (string, string) {
+
+	country := ""
+	organization := ""
+
+	client := &rdap.Client{}
+	server, err := client.QueryIP(ipAdd)
+
+	if err == nil {
+		country = server.Country
+		organization = server.Name
+	} else {
+		log.Printf("error: %v\n", err)
+	}
+
 	cmd := "whois " + ipAdd
 	err, out, errout := Shellout(cmd)
 	if err != nil {
@@ -338,20 +353,23 @@ func getCountryOwner(ipAdd string) (string, string) {
 		log.Printf("error: %v\n", errout)
 	}
 
-	i := strings.Index(out, "Country:")
-	country := ""
-	if i > -1 {
-		country = out[i+16 : i+18]
-	} else {
-		fmt.Println("Index not found")
+	var i int
+	if country == "" {
+		i = strings.Index(out, "Country:")
+		if i > -1 {
+			country = out[i+16 : i+18]
+		} else {
+			fmt.Println("Index not found")
+		}
 	}
 
-	i = strings.Index(out, "OrgName:")
-	organization := ""
-	if i > -1 {
-		organization = out[i+16 : i+22]
-	} else {
-		fmt.Println("Index not found")
+	if organization == "" {
+		i = strings.Index(out, "OrgName:")
+		if i > -1 {
+			organization = out[i+16 : i+22]
+		} else {
+			fmt.Println("Index not found")
+		}
 	}
 
 	return country, organization
