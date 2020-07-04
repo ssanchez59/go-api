@@ -344,31 +344,33 @@ func getCountryOwner(ipAdd string) (string, string) {
 		log.Printf("error: %v\n", err)
 	}
 
-	cmd := "whois " + ipAdd
-	err, out, errout := Shellout(cmd)
-	if err != nil {
-		log.Printf("error: %v\n", err)
-	}
-	if errout != "" {
-		log.Printf("error: %v\n", errout)
-	}
-
-	var i int
-	if country == "" {
-		i = strings.Index(out, "Country:")
-		if i > -1 {
-			country = out[i+16 : i+18]
-		} else {
-			fmt.Println("Index not found")
+	if country == "" || organization == "" {
+		cmd := "whois " + ipAdd
+		err, out, errout := Shellout(cmd)
+		if err != nil {
+			log.Printf("error: %v\n", err)
 		}
-	}
+		if errout != "" {
+			log.Printf("error: %v\n", errout)
+		}
 
-	if organization == "" {
-		i = strings.Index(out, "OrgName:")
-		if i > -1 {
-			organization = out[i+16 : i+22]
-		} else {
-			fmt.Println("Index not found")
+		var i int
+		if country == "" {
+			i = strings.Index(out, "Country:")
+			if i > -1 {
+				country = out[i+16 : i+18]
+			} else {
+				fmt.Println("Index not found")
+			}
+		}
+
+		if organization == "" {
+			i = strings.Index(out, "OrgName:")
+			if i > -1 {
+				organization = out[i+16 : i+22]
+			} else {
+				fmt.Println("Index not found")
+			}
 		}
 	}
 
