@@ -99,7 +99,7 @@ func Search(ctx *fasthttp.RequestCtx) {
 
 	// Create the "domains" table.
 	if _, err := db.Exec(
-		"CREATE TABLE IF NOT EXISTS domains (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), domain STRING, servers_changed bool, previous_ssl_grade string, logo string, title string, is_down bool )"); err != nil {
+		"CREATE TABLE IF NOT EXISTS domains (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), domain STRING, servers_changed bool, ssl_grade string, previous_ssl_grade string, logo string, title string, is_down bool )"); err != nil {
 		log.Fatal(err)
 	}
 
@@ -337,8 +337,8 @@ func getCountryOwner(ipAdd string) (string, string) {
 	if errout != "" {
 		log.Printf("error: %v\n", errout)
 	}
-	i := strings.Index(out, "Country:")
 
+	i := strings.Index(out, "Country:")
 	country := ""
 	if i > -1 {
 		country = out[i+16 : i+18]
@@ -347,7 +347,6 @@ func getCountryOwner(ipAdd string) (string, string) {
 	}
 
 	i = strings.Index(out, "OrgName:")
-
 	organization := ""
 	if i > -1 {
 		organization = out[i+16 : i+22]
