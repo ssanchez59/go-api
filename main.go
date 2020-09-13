@@ -89,6 +89,7 @@ func Search(ctx *fasthttp.RequestCtx) {
 	ctx.Response.Header.Set("Access-Control-Allow-Origin", "*")
 	// fmt.Fprintf(ctx, "hello, %s!\n", ctx.UserValue("domain"))
 	domain := ctx.UserValue("domain").(string)
+	domain = strings.ToLower(domain)
 
 	// Connect to the "api_info" database.
 	db, err := sql.Open("postgres",
